@@ -303,8 +303,8 @@ Fzag = Wzag.*F;
 Izag = ifft2(Fzag + conj(Fzag(N:-1:1,M:-1:1)));
 
 %plot zig and zag modes
-fig13 = figure(13)
-set(fig13,'position',[0,0,1200,400])
+fig14 = figure(14)
+set(fig14,'position',[0,0,1200,400])
 subplot(1,3,1)
 imagesc(fftshift(real(Izag)));
 subplot(1,3,2)
@@ -318,18 +318,14 @@ P_zag_avg = Wzag.*mean_power;
 P_zig_avg = Wzig.*mean_power;
 
 %envelope for zag modes
-P_avg = P_zag_avg + P_zig_avg(:,M:-1:1);
-figure(15)
-imagesc(abs(P_avg))
-NP = sum(sum(P_avg(N1:N2,M1:M2)));
-[n,m] = meshgrid(M1:M2,N1:N2);
-mc = sum(sum(m.*P_avg(N1:N2,M1:M2)))/NP;
-nc = sum(sum(n.*P_avg(N1:N2,M1:M2)))/NP;
-[l,k] = meshgrid(1:M,1:N);
-Azag = 2*real(ifft2(Fzag).*exp(-2*pi*1j*(k*mc/M + l*nc/N)));
+mc = 23;
+nc = 23;
+Azag = 2*real(ifft2(Fzag([nc:N,1:nc-1],[mc:M,1:mc-1])));
 
 %envelope for zig modes
-Azig = 2*real(ifft2(Fzig).*exp(2*pi*1j*(k*mc/M - l*nc/N)));
+mc = 618;
+nc = 21;
+Azig = 2*real(ifft2(Fzig([nc:N,1:nc-1],[mc:M,1:mc-1])));
 
 fig16 = figure(16)
 set(fig16,'position',[0,0,800,400])

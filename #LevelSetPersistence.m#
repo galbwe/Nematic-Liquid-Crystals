@@ -1,0 +1,177 @@
+%level set persistence on flat-fielded data
+%% import image and apply flat field filter
+%image size
+image_index = 20009;
+[raw_im,ff_im] = FlatFieldFilter(image_index);
+fig1 = figure(1)
+set(fig1,'position',[0,0,1000,400])
+subplot(1,2,1)
+imagesc(raw_im)
+colormap('gray')
+subplot(1,2,2)
+imagesc(ff_im)
+colormap('gray')
+%% compute level set persistence of a window of flat fielded image
+[N,M] = size(ff_im);%N is number of pixels in the y direction
+yrange = 50:200;%window size
+xrange = 50:200;
+ff_im2 = ff_im(yrange,xrange);
+filtered_persistence = figure(2)
+set(filtered_persistence,'position',[0,400,1200,400])
+subplot(1,3,1)
+imagesc(ff_im2)
+title('Image')
+colormap('gray')
+[H0,H1] = morseFiltration2D(ff_im2);
+subplot(1,3,2)
+plotpersistencediagram(H0);
+title('H_0 persistence')
+subplot(1,3,3)
+plotpersistencediagram(H1);
+title('H_1 persistence')
+%% compute persistence of a windowed, unflat-fielded image
+[N,M] = size(raw_im);%N is number of pixels in the y direction
+yrange = 50:200;%window size
+xrange = 50:200;
+im2 = raw_im(yrange,xrange);
+unfiltered_persistence = figure(3)
+set(unfiltered_persistence,'position',[1200,400,1200,400])
+subplot(1,3,1)
+imagesc(im2)
+colormap('gray')
+[H0,H1] = morseFiltration2D(im2);
+subplot(1,3,2)
+plotpersistencediagram(H0);
+title('H_0 persistence')
+subplot(1,3,3)
+plotpersistencediagram(H1);
+title('H_1 persistence')
+%% generate and compute persistence of a sum of fourier modes
+xrange = linspace(0,2*pi,100);
+yrange = linspace(0,2*pi,100);
+[x,y] = meshgrid(xrange,yrange);
+%rows are wavevector direction x, wavevector direction y, amplitude, period
+wavedata = [1,1,1,10;-1,1,1,8];
+sz = size(wavedata);
+number_modes = sz(1,1);
+noise = .1*(2*rand(size(x))-1);
+z = zeros(size(x));
+for i = 1:number_modes
+    kx = wavedata(i,1);
+    ky = wavedata(i,2);
+    ksq = kx^2 + ky^2;
+    kx = kx/ksq;
+    ky = ky/ksq;
+    a = wavedata(i,3);
+    p = wavedata(i,4);
+    z = z + a*cos(p*(kx*x + ky*y));
+end
+synthetic_persistence = figure(4)
+set(synthetic_persistence,'position',[1200,0,1200,400])
+subplot(1,3,1)
+imagesc(z)
+title('Image')
+colormap('gray')
+[H0,H1] = morseFiltration2D(z);
+subplot(1,3,2)
+plotpersistencediagram(H0)
+title('H_0 persistence')
+subplot(1,3,3)
+plotpersistencediagram(H1)
+title('H_1 persistence')
+%% plot fourier spectrum of the flatfielded data
+[N,M] = size(ff_im);
+u = ff_im;
+uhat = fft2(u);
+power = abs(fftshift(uhat));
+min_thresh = 2*10^4
+max_thresh = 4*10^4
+max_peak_height = max(max(power))
+[n_0,m_0] = find(power == max_peak_height)
+power(power < min_thresh) = 0;
+power(power > max_thresh) = max_thresh;
+nrange = (n_0-60):(n_0+60);
+mrange = (m_0-60):(m_0+60);
+nlow = min(nrange);
+nhigh = max(nrange);
+mlow = min(mrange);
+mhigh = max(mrange);
+fourier_spectrum = figure(5)
+set(fourier_spectrum,'position',[0,800,1200,800])
+subplot(2,2,1)
+[n,m] = meshgrid(nrange,mrange);
+power2 = power(nrange,mrange)
+mesh(n,m,power2)
+colormap('jet')
+xlim([nlow,nhigh])
+ylim([mlow,mhigh])
+zlim([0,max_thresh])
+title('power density spectrum')
+subplot(2,2,2)
+imagesc(power(nrange,mrange))
+%zig mode
+subplot(2,2,3)
+zig_n_range = 38:44
+zig_m_range = 80:93
+[zig_n,zig_m] = meshgrid(zig_n_range,zig_m_range);
+power3 = power2(zig_n_range,zig_m_range);
+mesh(zig_n,zig_m,power3')
+colormap('jet')
+title('zig modes')
+%zag mode
+subplot(2,2,4)
+zag_n_range = 80:86;
+zag_m_range = 78:89;
+[zig_n,zig_m] = meshgrid(zag_n_range,zag_m_range);
+power4 = power2(zag_n_range,zag_m_range);
+%imagesc(power4)
+mesh(zig_n,zig_m,power4')
+colormap('jet')
+title('zag modes')
+%% persistence on surface filtered by fourier modes
+[N,M] = size(ff_im);
+u = ff_im;
+uhat = fft2(u);
+power = abs(uhat);
+min_thresh = 3*10^4;
+max_thresh = 4*10^4;
+uhat(power < min_thresh) = 0;
+uhat(power > max_thresh) = 0;
+u2 = real(ifft2(uhat));
+filtered_surface = figure(6)
+set(filtered_surface,'position',[0,0,1200,1000])
+subplot(2,2,1)
+imagesc(u2)
+colormap('gray')
+title('filtered surface')
+subplot(2,2,2)
+nmin = 300;
+nmax = 400;
+mmin = 50;
+mmax = 130;
+nrange = nmin:nmax;
+mrange = mmin:mmax;
+u3 = u2(nrange,mrange);
+imagesc(u3)
+title('window for persistence')
+[H0,H1] = morseFiltration2D(u3);
+subplot(2,2,3)
+plotpersistencediagram(H0)
+title('H_0 persistence')
+subplot(2,2,4)
+plotpersistencediagram(H1)
+title('H_1 persistence')
+%% window the zig modes and compute the envelope
+[N,M] = size(ff_im);
+u = ff_im;
+uhat = fft2(u);
+num_N_windows =80;
+num_M_windows = 60;
+
+for n = 1:num_N_windows-1
+    for m = 1:num_M_windows-1
+	      nrange = n*N/num_N_windows:(n+1)*N/num_N_windows-1;
+	      mrange = m*M/num_M_windows:(m+1)*M/num_M_windows-1;
+win_mean = mean(mean(uhat(nrange,mrange));
+    end
+end

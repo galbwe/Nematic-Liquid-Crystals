@@ -268,81 +268,8 @@ mean_power2(N/2-10:N/2+10,M/2-10:M/2+10) = 0;
 mean_power2(mean_power2 < threshold) = 0;
 imagesc(mean_power2(Nrange,Mrange))
 save('mean_power.mat','mean_power2')
-%% manually shift critical modes to the origin
-clear
-close all
-load('mean_power.mat')
-M = 640;
-N = 480;
-T = 30000;
-mean_power = fftshift(mean_power2);
-figure(13)
-imagesc(mean_power)
-
-%load image
-image_index = 20009;
-[raw_im,I] = FlatFieldFilter(image_index);
-F = fft2(I);
-
-%zig modes
-M1 = 607;
-M2 = 627;
-N1 = 16;
-N2 = 27;
-Wzig = zeros(N,M);
-Wzig(N1:N2,M1:M2) = 1;
-Fzig = Wzig.*F;
-Izig = ifft2(Fzig + conj(Fzig(N:-1:1,M:-1:1)));
-
-%zag modes
-M1 = 12;
-M2 = 35;
-N1 = 17;
-N2 = 29;
-Wzag = zeros(N,M);
-Wzag(N1:N2,M1:M2) = 1;
-Fzag = Wzag.*F;
-Izag = ifft2(Fzag + conj(Fzag(N:-1:1,M:-1:1)));
-
-%plot zig and zag modes
-fig14 = figure(14)
-set(fig14,'position',[0,0,1200,400])
-subplot(1,3,1)
-imagesc(fftshift(real(Izag)));
-subplot(1,3,2)
-imagesc(fftshift(real(Izig)))
-subplot(1,3,3)
-imagesc(fftshift(real(Izag + Izig)))
-colormap('hot')
-
-%plot envelopes
-P_zag_avg = Wzag.*mean_power;
-P_zig_avg = Wzig.*mean_power;
-
-%envelope for zag modes
-mc = 23;
-nc = 23;
-Azag = 2*real(ifft2(Fzag([nc:N,1:nc-1],[mc:M,1:mc-1])));
-
-%envelope for zig modes
-mc = 618;
-nc = 21;
-Azig = 2*real(ifft2(Fzig([nc:N,1:nc-1],[mc:M,1:mc-1])));
-
-fig16 = figure(16)
-set(fig16,'position',[0,0,800,400])
-subplot(1,2,1)
-imagesc(Azag); title('A_{zag}')
-subplot(1,2,2)
-imagesc(Azig); title('A_{zig}')
-colormap('hot')
-
-figure(17)
-hold on
-plot(1:M,Azag(100,:))
-plot(1:M,Izag(100,:))
-legend('A_{zag}','I_{zag}')
-%% shift critical modes to origin implicitly with property of fourier transform
+%% compute envelopes of zig and zag modes and plot holes
+% shift critical modes to origin implicitly with property of fourier transform
 clear
 close all
 load('mean_power.mat')
@@ -393,19 +320,19 @@ colormap('hot')
 P_zag_avg = Wzag.*mean_power;
 P_zig_avg = Wzig.*mean_power;
 
-%envelope for zag modes
+%compute critical wavenumbers mc and nc
 P_avg = P_zag_avg + P_zig_avg(:,M:-1:1);
 figure(15)
 imagesc(abs(P_avg))
 NP = sum(sum(P_avg(N1:N2,M1:M2)));
 [n,m] = meshgrid(M1:M2,N1:N2);
-mc = sum(sum(m.*P_avg(N1:N2,M1:M2)))/NP;
-nc = sum(sum(n.*P_avg(N1:N2,M1:M2)))/NP;
-[l,k] = meshgrid(1:M,1:N);
-Azag = 2*real(ifft2(Fzag).*exp(-2*pi*1j*(k*mc/M + l*nc/N)));
+mc = round(sum(sum(m.*P_avg(N1:N2,M1:M2)))/NP);
+nc = round(sum(sum(n.*P_avg(N1:N2,M1:M2)))/NP);
 
-%envelope for zig modes
-Azig = 2*real(ifft2(Fzig).*exp(2*pi*1j*(k*mc/M - l*nc/N)));
+%zag envelope - shift (mc,nc) to origin
+Azag = 2*real(ifft2(Fzag([nc:N,1:nc-1],[mc:M,1:mc-1])));
+%zig envelope - shift (M-mc,nc) to origin
+Azig = 2*real(ifft2(Fzig([nc:N,1:nc-1],[M-mc:M,1:M-mc-1])));
 
 fig16 = figure(16)
 set(fig16,'position',[0,0,800,400])
@@ -420,3 +347,102 @@ hold on
 plot(1:M,Azag(100,:))
 plot(1:M,Izag(100,:))
 legend('A_{zag}','I_{zag}')
+
+%find holes (zeros of envelopes)
+thresh = 4*1e-2;
+Hzag = (abs(Azag) > thresh);
+Hzig = (abs(Azig) > thresh);
+holes = figure(18);
+set(holes,'position',[0,0,800,400]);
+subplot(1,2,1)
+imagesc(Hzag);
+subplot(1,2,2)
+imagesc(Hzig);
+colormap('gray')
+%% plot envelopes and holes over time
+clear
+close all
+load('mean_power.mat')
+M = 640;
+N = 480;
+T = 30000;
+imin = 1;
+imax = 30000;
+thresh = 2*1e-2;
+plot_holes = true;
+
+mean_power = fftshift(mean_power2);
+
+%zig window
+M1 = 607;
+M2 = 627;
+N1 = 16;
+N2 = 27;
+Wzig = zeros(N,M);
+Wzig(N1:N2,M1:M2) = 1;
+
+%zag window
+M1 = 12;
+M2 = 35;
+N1 = 17;
+N2 = 29;
+Wzag = zeros(N,M);
+Wzag(N1:N2,M1:M2) = 1;
+
+%compute critical wavenumbers mc and nc
+%these will be in the zag window
+M1 = 12;
+M2 = 35;
+N1 = 17;
+N2 = 29;
+P_zag_avg = Wzag.*mean_power;
+P_zig_avg = Wzig.*mean_power;
+P_avg = P_zag_avg + P_zig_avg(:,M:-1:1);
+NP = sum(sum(P_avg(N1:N2,M1:M2)));
+[n,m] = meshgrid(M1:M2,N1:N2);
+mc = round(sum(sum(m.*P_avg(N1:N2,M1:M2)))/NP);
+nc = round(sum(sum(n.*P_avg(N1:N2,M1:M2)))/NP);
+
+%create a figure to draw on
+holes_movie = figure(19)
+set(holes_movie,'position',[0,0,1200,800])
+
+for i = imin:imax
+    [raw_im,I] = FlatFieldFilter(i);
+    F = fft2(I);
+    Fzig = Wzig.*F;
+    Izig = ifft2(Fzig + conj(Fzig(N:-1:1,M:-1:1)));
+    Fzag = Wzag.*F;
+    Izag = ifft2(Fzag + conj(Fzag(N:-1:1,M:-1:1)));
+    %zag envelope - shift (mc,nc) to origin
+    Azag = 2*real(ifft2(Fzag([nc:N,1:nc-1],[mc:M,1:mc-1])));
+    %zig envelope - shift (M-mc,nc) to origin
+    Azig = 2*real(ifft2(Fzig([nc:N,1:nc-1],[M-mc:M,1:M-mc-1])));
+    %holes - zeros of envelopes
+    Hzag = (abs(Azag) > thresh);
+    Hzig = (abs(Azig) > thresh);
+    
+    subplot(2,3,1)
+    imagesc(fftshift(real(Izig)))
+    title('I_{zig}')
+    subplot(2,3,2)
+    imagesc(fftshift(real(Izag)))
+    title('I_{zag}')
+    subplot(2,3,3)
+    imagesc(fftshift(real(Izig + Izag)))
+    title('I_{zig} + I_{zag}')
+    colormap('hot')
+    
+    if plot_holes
+        subplot(2,3,4)
+        imagesc(Hzag);title('H_{zag}');
+        subplot(2,3,5)
+        imagesc(Hzig);title('H_{zig}');
+    else
+        subplot(2,3,4)
+        imagesc(Azag);title('A_{zag}');
+        subplot(2,3,5)
+        imagesc(Azig);title('A_{zig}');
+    end
+    pause(0.5)
+end

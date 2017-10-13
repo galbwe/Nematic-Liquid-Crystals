@@ -368,7 +368,7 @@ N = 480;
 T = 30000;
 imin = 1;
 imax = 30000;
-thresh = 2*1e-2;
+thresh = 2*1e-4;
 plot_holes = true;
 
 mean_power = fftshift(mean_power2);
@@ -430,9 +430,7 @@ for i = imin:imax
     title('I_{zag}')
     subplot(2,3,3)
     imagesc(fftshift(real(Izig + Izag)))
-    title('I_{zig} + I_{zag}')
-    colormap('hot')
-    
+    title('I_{zig} + I_{zag}')    
     if plot_holes
         subplot(2,3,4)
         imagesc(Hzag);title('H_{zag}');
@@ -444,5 +442,9 @@ for i = imin:imax
         subplot(2,3,5)
         imagesc(Azig);title('A_{zig}');
     end
+    colormap('hot')
+    subplot(2,3,6)
+    imagesc(I)
+    colormap('gray')
     pause(0.5)
 end

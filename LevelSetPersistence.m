@@ -409,6 +409,7 @@ set(holes_movie,'position',[0,0,1200,800])
 
 for i = imin:imax
     [raw_im,I] = FlatFieldFilter(i);
+    [N,M] = size(I);
     F = fft2(I);
     Fzig = Wzig.*F;
     Izig = ifft2(Fzig + conj(Fzig(N:-1:1,M:-1:1)));
@@ -419,8 +420,11 @@ for i = imin:imax
     %zig envelope - shift (M-mc,nc) to origin
     Azig = 2*real(ifft2(Fzig([nc:N,1:nc-1],[M-mc:M,1:M-mc-1])));
     %holes - zeros of envelopes
-    Hzag = (abs(Azag) > thresh);
-    Hzig = (abs(Azig) > thresh);
+    Hzag = (abs(Azag) < thresh);
+    Hzig = (abs(Azig) < thresh);
+    [HzagX,HzagY] = findOnes(Hzag);
+    [HzigX,HzigY] = findOnes(Hzig);
+    
     
     subplot(2,3,1)
     imagesc(fftshift(real(Izig)))
@@ -433,9 +437,9 @@ for i = imin:imax
     title('I_{zig} + I_{zag}')    
     if plot_holes
         subplot(2,3,4)
-        imagesc(Hzag);title('H_{zag}');
+        scatter(HzagX,fliplr(HzagY),16,'g','filled');title('H_{zag}');
         subplot(2,3,5)
-        imagesc(Hzig);title('H_{zig}');
+        scatter(HzigX,fliplr(HzigY),16,'g','filled');title('H_{zag}');
     else
         subplot(2,3,4)
         imagesc(Azag);title('A_{zag}');
@@ -445,6 +449,6 @@ for i = imin:imax
     colormap('hot')
     subplot(2,3,6)
     imagesc(I)
-    colormap('gray')
+    colormap('hot')
     pause(0.5)
 end

@@ -48,10 +48,10 @@ cm2 = findCritModes(mean_power,window2);
 cm3 = findCritModes(mean_power,window3);
 cm4 = findCritModes(mean_power,window4);
 %threshold for computing holes
-thresh = 7e-3;
+thresh = 3e-2;
 %times to plot between
 imin = 2017;
-imax = 2017;
+imax = 2117;
 %create figure to draw on
 holes_movie = figure(2);
 set(holes_movie,'position',[0,0,1600,800]);
